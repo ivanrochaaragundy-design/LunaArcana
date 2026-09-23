@@ -1,4 +1,5 @@
 import { useState, useRef, useMemo } from "react";
+import ReactMarkdown from "react-markdown";
 
 const TAROT_CARDS = [
   { id: 0, name: "El Loco", emoji: "🃏", keywords: "libertad, inicio, aventura" },
@@ -427,9 +428,18 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
                     <span style={{ fontSize: 16, marginLeft: 6 }}>✨</span>
                   </div>
                   <div style={{ width: 48, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,208,70,.42), transparent)", margin: "0 auto 18px" }} />
-                  <p style={{ fontSize: 14, lineHeight: 1.9, color: "rgba(230,206,255,.87)", margin: 0, fontStyle: "italic" }}>
-                    {interpretation}
-                  </p>
+                            <div style={{ fontSize: 14, lineHeight: 1.9, color: "rgba(230,206,255,.87)", fontStyle: "italic" }}>
+            <ReactMarkdown
+              components={{
+                p: ({node, ...props}) => <p style={{ margin: "0 0 12px 0" }} {...props} />,
+                strong: ({node, ...props}) => <strong style={{ color: "#ffd76a", fontWeight: 700, fontStyle: "normal" }} {...props} />,
+              }}
+            >
+              {interpretation}
+            </ReactMarkdown>
+          </div>
+                    
+        
                 </div>
               )}
 
