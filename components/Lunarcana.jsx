@@ -465,6 +465,7 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
         )}
       </div>
       <footer style={{ textAlign: "center", padding: "24px", fontSize: 12, opacity: 0.6 }}>
+  <a href="/precios" style={{ color: "inherit", marginRight: 16 }}>Precios</a>
   <a href="/terminos" style={{ color: "inherit", marginRight: 16 }}>Términos</a>
   <a href="/privacidad" style={{ color: "inherit", marginRight: 16 }}>Privacidad</a>
   <a href="/reembolsos" style={{ color: "inherit" }}>Reembolsos</a>
