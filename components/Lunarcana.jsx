@@ -421,6 +421,8 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
                   padding: "26px 22px", marginBottom: 22,
                   animation: "fadeUp .7s ease both",
                   boxShadow: "0 4px 32px rgba(90,15,195,.14)",
+                              maxWidth: "100%",
+            boxSizing: "border-box",
                 }}>
                   <div style={{ textAlign: "center", marginBottom: 16 }}>
                     <span style={{ fontSize: 16, marginRight: 6 }}>🌙</span>
@@ -428,7 +430,7 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
                     <span style={{ fontSize: 16, marginLeft: 6 }}>✨</span>
                   </div>
                   <div style={{ width: 48, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,208,70,.42), transparent)", margin: "0 auto 18px" }} />
-                            <div style={{ fontSize: 14, lineHeight: 1.9, color: "rgba(230,206,255,.87)", fontStyle: "italic" }}>
+                            <div style={{ fontSize: 14, lineHeight: 1.9, color: "rgba(230,206,255,.87)", fontStyle: "italic", overflowWrap: "break-word", wordBreak: "break-word" }}>
             <ReactMarkdown
               components={{
                 p: ({node, ...props}) => <p style={{ margin: "0 0 12px 0" }} {...props} />,
