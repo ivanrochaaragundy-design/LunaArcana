@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 
 const TAROT_CARDS = [
@@ -31,6 +31,25 @@ const SPREADS = [
   { id: "three", name: "3 Cartas",  desc: "Pasado · Presente · Futuro", count: 3, icon: "✦✦✦" },
   { id: "five",  name: "5 Cartas",  desc: "Cruz de revelación",         count: 5, icon: "✦✦✦✦✦" },
 ];
+
+const FREE_LIMIT = 3; // lecturas gratis por día
+// Pega aquí el link real de tu producto (Gumroad → Share → Copy URL)
+const CHECKOUT_URL = "https://lunarcana3.gumroad.com/l/premium";
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+function getFreeUsed() {
+  try {
+    const d = JSON.parse(localStorage.getItem("lunarcana_free") || "{}");
+    return d.day === todayKey() ? d.n : 0;
+  } catch { return 0; }
+}
+function addFreeUsed() {
+  try {
+    const n = getFreeUsed() + 1;
+    localStorage.setItem("lunarcana_free", JSON.stringify({ day: todayKey(), n }));
+    return n;
+  } catch { return 0; }
+}
 
 /* ── Floating particles (stars + gold dust) ── */
 function FloatingParticles() {
@@ -156,6 +175,58 @@ export default function Lunarcana() {
   const [error, setError] = useState("");
   const [btnActive, setBtnActive] = useState(false);
   const resultRef = useRef(null);
+  const [licenseKey, setLicenseKey] = useState("");
+const [isPremium, setIsPremium] = useState(false);
+const [keyInput, setKeyInput] = useState("");
+const [keyError, setKeyError] = useState("");
+const [verifying, setVerifying] = useState(false);
+const [freeUsed, setFreeUsed] = useState(0);
+
+useEffect(() => {
+  setFreeUsed(getFreeUsed());
+  const saved = localStorage.getItem("lunarcana_license");
+  if (saved) { setLicenseKey(saved); verifyKey(saved, true); }
+  // eslint-disable-next-line
+}, []);
+
+async function verifyKey(key, silent = false) {
+  setVerifying(true);
+  setKeyError("");
+  try {
+    const res = await fetch("/api/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ licenseKey: key }),
+    });
+    const data = await res.json();
+    if (data.premium) {
+      localStorage.setItem("lunarcana_license", key);
+      setLicenseKey(key);
+      setIsPremium(true);
+      if (!silent) setScreen("home");
+    } else if (data.reason === "error") {
+      // Falla de red: si ya tenía clave guardada, no se la quitamos
+      if (silent) setIsPremium(true);
+      else setKeyError("No pudimos verificar ahora. Intenta de nuevo en un momento.");
+    } else {
+      localStorage.removeItem("lunarcana_license");
+      setIsPremium(false);
+      if (!silent) {
+        const msgs = {
+          invalid: "Clave no válida. Revísala e intenta de nuevo.",
+          cancelled: "Tu suscripción fue cancelada.",
+          expired: "Tu suscripción ya no está activa.",
+          refunded: "Esta compra fue reembolsada.",
+        };
+        setKeyError(msgs[data.reason] || "No se pudo activar la clave.");
+      }
+    }
+  } catch {
+    if (silent) setIsPremium(true);
+    else setKeyError("No pudimos conectar. Intenta de nuevo.");
+  }
+  setVerifying(false);
+}
   const POSITIONS_3 = ["Pasado", "Presente", "Futuro"];
   const POSITIONS_5 = ["Base", "Desafío", "Pasado", "Futuro", "Resultado"];
   function getPositions(count) {
@@ -169,6 +240,8 @@ export default function Lunarcana() {
   }
 
   async function startReading() {
+    if (!isPremium && getFreeUsed() >= FREE_LIMIT) { setScreen("paywall"); return; }
+if (!isPremium) setFreeUsed(addFreeUsed());
     setBtnActive(true);
     setTimeout(() => setBtnActive(false), 260);
     setShuffling(true);
@@ -200,7 +273,7 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
       const res = await fetch("/api/interpret", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ prompt, licenseKey }),
       });
       if (!res.ok) throw new Error("bad response");
       const data = await res.json();
@@ -357,7 +430,14 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
             >
               ☽ &nbsp; Consultar el Destino &nbsp; ☾
             </button>
-
+<div style={{ textAlign: "center", marginTop: 16, fontSize: 11, letterSpacing: 2, color: "rgba(195,150,255,.55)", fontFamily: "'Cinzel', serif" }}>
+  {isPremium
+    ? "✦ PREMIUM ACTIVO ✦"
+    : <>Lecturas gratis hoy: {Math.max(0, FREE_LIMIT - freeUsed)} de {FREE_LIMIT}
+        {" · "}
+        <span onClick={() => setScreen("paywall")} style={{ cursor: "pointer", textDecoration: "underline" }}>Tengo una clave</span>
+      </>}
+</div>
             <div style={{ textAlign: "center", marginTop: 26 }}>
               <span style={{ fontSize: 8.5, letterSpacing: 4, color: "rgba(175,125,255,.22)", textTransform: "uppercase", fontFamily: "'Cinzel', serif" }}>
                 ✦ &nbsp; Mazo Mayor · 22 Arcanos &nbsp; ✦
@@ -365,7 +445,59 @@ Da una lectura de tarot en español, mística y poética pero práctica. Máximo
             </div>
           </div>
         )}
+{screen === "paywall" && (
+  <div style={{ animation: "fadeUp .7s ease both", paddingTop: 70, textAlign: "center" }}>
+    <div style={{ fontSize: 40, marginBottom: 14 }}>🌙</div>
+    <h2 style={{ fontFamily: "'Cinzel', serif", fontSize: 18, letterSpacing: 3, color: "#f0e0ff", margin: "0 0 10px" }}>
+      Tus lecturas gratis de hoy terminaron
+    </h2>
+    <p style={{ fontSize: 14, lineHeight: 1.7, color: "rgba(215,180,255,.7)", fontStyle: "italic", margin: "0 0 26px" }}>
+      Con Lunarcana Premium tienes lecturas ilimitadas por $4.99 al mes. Cancela cuando quieras.
+    </p>
 
+    <a href={CHECKOUT_URL} target="_blank" rel="noopener noreferrer" style={{
+      display: "block", padding: "18px", borderRadius: 14, textDecoration: "none",
+      border: "1px solid rgba(205,145,255,.32)",
+      background: "linear-gradient(135deg, #6418bf 0%, #38008e 50%, #6418bf 100%)",
+      color: "#f0e0ff", fontSize: 12.5, fontFamily: "'Cinzel', serif", letterSpacing: 4,
+      textTransform: "uppercase", boxShadow: "0 0 30px rgba(110,35,215,.6)", marginBottom: 30,
+    }}>
+      ✦ Suscribirme a Premium ✦
+    </a>
+
+    <div style={{ fontSize: 10, letterSpacing: 3, textTransform: "uppercase", color: "rgba(195,150,255,.5)", fontFamily: "'Cinzel', serif", marginBottom: 10 }}>
+      ¿Ya te suscribiste? Ingresa tu clave
+    </div>
+    <input
+      value={keyInput}
+      onChange={e => setKeyInput(e.target.value)}
+      placeholder="XXXXXXXX-XXXXXXXX-XXXXXXXX-XXXXXXXX"
+      style={{
+        width: "100%", background: "rgba(255,255,255,.022)", border: "1px solid rgba(155,85,250,.27)",
+        borderRadius: 12, color: "#eeddff", fontSize: 13, padding: "14px 16px", textAlign: "center",
+        marginBottom: 10, outline: "none",
+      }}
+    />
+    {keyError && <div style={{ color: "rgba(255,150,150,.8)", fontSize: 13, marginBottom: 10 }}>{keyError}</div>}
+    <button
+      onClick={() => verifyKey(keyInput.trim())}
+      disabled={!keyInput.trim() || verifying}
+      style={{
+        width: "100%", padding: "15px", borderRadius: 12, border: "1.5px solid rgba(155,85,250,.4)",
+        background: "rgba(255,255,255,.03)", color: "#eeddff", fontSize: 11.5,
+        fontFamily: "'Cinzel', serif", letterSpacing: 4, textTransform: "uppercase",
+        cursor: keyInput.trim() && !verifying ? "pointer" : "not-allowed", marginBottom: 18,
+      }}
+    >
+      {verifying ? "Verificando..." : "Activar clave"}
+    </button>
+    <button onClick={() => { setKeyError(""); setScreen("home"); }} style={{
+      background: "none", border: "none", color: "rgba(190,145,255,.55)", fontSize: 12, cursor: "pointer", textDecoration: "underline",
+    }}>
+      Volver
+    </button>
+  </div>
+)}
         {shuffling && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", animation: "fadeUp .45s ease both" }}>
             <div style={{ fontSize: 62, animation: "shuffle .55s ease-in-out infinite", marginBottom: 28 }}>🌙</div>
